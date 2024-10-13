@@ -1,4 +1,4 @@
 PHONY : all
 
 all : MyMatrix.cpp
-	g++ MyMatrix.cpp -o main
+	g++ MyMatrix.cpp square.c -o main
