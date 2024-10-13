@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 #include "MyMatrix.h"
 #include "container_cout.h"
 #include "square.h"
@@ -10,10 +11,26 @@
  Matrix() - матрица ранга 0.
  Matrix(int n) - единичная матрица ранга n.
  Matrix(vector<vector<double>> data) - делает из поданного вектора векторов
+=======
+#include <algorithm>
+#include <iostream>
+#include <string>
+#include <vector>
+
+/*
+ Здесь реализован шаблонный класс матриц MyMatrix.
+ Пока матрицы умеют складываться (+,+=), умножаться (*, *=) и
+ транспонироваться.
+ Есть 3 конструктора :
+ MyMatrix() - матрица ранга 0.
+ MyMatrix(int n) - единичная матрица ранга n.
+ MyMatrix(vector<vector<T>> data) - делает из поданного вектора векторов
+>>>>>>> main
  хорошую матрицу.
  Можно вывести через cout. В целом всё.
 */
 
+<<<<<<< HEAD
 namespace MyMatrix
 {
 class Matrix
@@ -43,6 +60,21 @@ public:
   Matrix (int n)
   {
     std::vector<double> curr_row = {};
+=======
+template <class T> class MyMatrix
+{
+private:
+  std::vector<std::vector<T> > _data = {};
+
+public:
+  // Просто какая-то пустая матрица нулевой размерности
+  MyMatrix () {}
+
+  // Единичная матрица NxN
+  MyMatrix<T> (int n)
+  {
+    std::vector<T> curr_row = {};
+>>>>>>> main
     for (size_t i = 0; i < n; i++)
     {
       for (size_t j = 0; j < n; j++)
@@ -57,7 +89,11 @@ public:
       _data[i][i] = 1;
   }
 
+<<<<<<< HEAD
   Matrix (std::vector<std::vector<double> > data)
+=======
+  MyMatrix (std::vector<std::vector<T> > data)
+>>>>>>> main
   {
     int columnSize = data[0].size ();
     for (size_t i = 1; i < data.size (); i++)
@@ -77,14 +113,27 @@ public:
   int  getColumnLen () const { return _data[0].size (); }
   bool isSquare () const { return getRowLen () == getColumnLen (); }
 
+<<<<<<< HEAD
   bool checkRows (Matrix &m) const { return (getRowLen () == m.getRowLen ()); }
 
   bool checkColumns (Matrix &m) const
+=======
+  bool checkRows (MyMatrix &m) const
+  {
+    return (getRowLen () == m.getRowLen ());
+  }
+
+  bool checkColumns (MyMatrix &m) const
+>>>>>>> main
   {
     return (getColumnLen () == m.getColumnLen ());
   }
 
+<<<<<<< HEAD
   void checkSizes (Matrix &m) const
+=======
+  void checkSizes (MyMatrix &m) const
+>>>>>>> main
   {
     if (!(checkRows (m) and checkColumns (m)))
     {
@@ -93,7 +142,11 @@ public:
     }
   }
 
+<<<<<<< HEAD
   double getElem (unsigned int r, unsigned int c) const
+=======
+  T getElem (unsigned int r, unsigned int c) const
+>>>>>>> main
   {
     if ((r >= getRowLen ()) or (c >= getColumnLen ()))
     {
@@ -103,6 +156,7 @@ public:
     return _data[r][c];
   };
 
+<<<<<<< HEAD
   void setElem (unsigned int r, unsigned int c, double val)
   {
     _data[r][c] = val;
@@ -110,6 +164,36 @@ public:
   void addRow (std::vector<double> row) { _data.push_back (row); }
 
   Matrix &operator+= (Matrix m)
+=======
+  void setElem (unsigned int r, unsigned int c, T val) { _data[r][c] = val; }
+  void addRow (std::vector<T> row) { _data.push_back (row); }
+
+  MyMatrix transpose () const
+  {
+    MyMatrix<T> m_copy;
+
+    std::vector<T> curr_row = {};
+
+    for (size_t j = 0; j < getColumnLen (); j++)
+    {
+      for (size_t i = 0; i < getRowLen (); i++)
+        curr_row.push_back (0);
+
+      m_copy._data.push_back (curr_row);
+      curr_row = {};
+    }
+
+    for (size_t i = 0; i < getRowLen (); i++)
+    {
+      for (size_t j = 0; j < getColumnLen (); j++)
+        m_copy.setElem (j, i, getElem (i, j));
+    }
+
+    return m_copy;
+  }
+
+  MyMatrix &operator+= (MyMatrix m)
+>>>>>>> main
   {
     checkSizes (m);
 
@@ -120,16 +204,27 @@ public:
     return *this;
   }
 
+<<<<<<< HEAD
   friend Matrix operator+ (Matrix m1, Matrix m2)
   {
     m1.checkSizes (m2);
     Matrix tmp_m = m1;
+=======
+  friend MyMatrix operator+ (MyMatrix m1, MyMatrix m2)
+  {
+    m1.checkSizes (m2);
+    MyMatrix tmp_m = m1;
+>>>>>>> main
     tmp_m += m2;
 
     return tmp_m;
   }
 
+<<<<<<< HEAD
   Matrix &operator*= (Matrix m)
+=======
+  MyMatrix &operator*= (MyMatrix m)
+>>>>>>> main
   {
     if (this->getColumnLen () != m.getRowLen ())
     {
@@ -137,10 +232,17 @@ public:
       exit (1);
     }
 
+<<<<<<< HEAD
     Matrix m_copy = *this;
     _data         = {};
 
     std::vector<double> curr_row = {};
+=======
+    MyMatrix m_copy = *this;
+    _data           = {};
+
+    std::vector<T> curr_row = {};
+>>>>>>> main
     for (size_t i = 0; i < m_copy.getRowLen (); i++)
     {
       for (size_t j = 0; j < m.getColumnLen (); j++)
@@ -158,6 +260,7 @@ public:
     return *this;
   }
 
+<<<<<<< HEAD
   Matrix &operator*= (double num)
   {
     for (size_t i = 0; i < getRowLen (); i++)
@@ -172,17 +275,25 @@ public:
   }
 
   friend Matrix operator* (Matrix m1, Matrix m2)
+=======
+  friend MyMatrix operator* (MyMatrix m1, MyMatrix m2)
+>>>>>>> main
   {
     if (m1.getColumnLen () != m2.getRowLen ())
     {
       std::cout << "Error : inequal dimensions for multiplication\n";
       exit (1);
     }
+<<<<<<< HEAD
     Matrix tmp_m = m1;
+=======
+    MyMatrix tmp_m = m1;
+>>>>>>> main
     tmp_m *= m2;
 
     return tmp_m;
   }
+<<<<<<< HEAD
 
   friend Matrix operator* (double num, Matrix m)
   {
@@ -715,6 +826,14 @@ void print_LDU_Seidel (Matrix &m, std::vector<double> f)
 // ссылку для аргумента matrix пришлось убрать, чтобы в cout можно было
 // подавать выражения из матриц
 std::ostream &operator<< (std::ostream &out, Matrix matrix)
+=======
+};
+
+// ссылку для аргумента matrix пришлось убрать, чтобы в cout можно было
+// подавать выражения из матриц
+template <class T>
+std::ostream &operator<< (std::ostream &out, MyMatrix<T> matrix)
+>>>>>>> main
 {
   int max_len_of_elem  = 0;
   int curr_len_of_elem = 0;
@@ -746,36 +865,57 @@ std::ostream &operator<< (std::ostream &out, Matrix matrix)
     }
     out << "|" << std::endl;
   }
+<<<<<<< HEAD
 
+=======
+>>>>>>> main
   out << std::endl;
   return out;
 }
 
 int main ()
 {
+<<<<<<< HEAD
   Matrix m1;
   Matrix m2 = Matrix ({
+=======
+  MyMatrix<int> m1;
+  MyMatrix<int> m2 = MyMatrix<int> ({
+>>>>>>> main
       { 1, 2, 5 },
       { 3, 4, 7 },
       { 1, 5, 4 }
   });
+<<<<<<< HEAD
   Matrix m3 = Matrix ({
+=======
+  MyMatrix<int> m3 = MyMatrix<int> ({
+>>>>>>> main
       {   3, 17,  6 },
       {   4,  0, 12 },
       { 192,  2,  9 }
   });
 
+<<<<<<< HEAD
   Matrix m4 = Matrix ({
+=======
+  MyMatrix<int> m4 = MyMatrix<int> ({
+>>>>>>> main
       { 1, 2, 3 },
       { 4, 5, 6 }
   });
 
+<<<<<<< HEAD
   Matrix m5 = Matrix ({
+=======
+  MyMatrix<int> m5 = MyMatrix<int> ({
+>>>>>>> main
       { 1, 2 },
       { 3, 4 },
       { 5, 6 }
   });
 
+<<<<<<< HEAD
   Matrix m6 ({
       { 1, 2, 3, 4, 5, 6 },
       { 6, 7, 8, 9, 1, 7 },
@@ -816,5 +956,14 @@ int main ()
   std::cout << std::endl;
   print_LDU_Seidel (m11, f1);
   //  std::cout << res;
+=======
+  std::cout << m2 + m3;
+  std::cout << m4 << m4.transpose ();
+  MyMatrix<int> E (2);
+  std::cout << m3 * m2;
+  auto m = (m4 * m5) + E;
+  std::cout << m;
+
+>>>>>>> main
   return 0;
 }
