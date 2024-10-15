@@ -4,8 +4,8 @@
 
 /*
  Здесь реализован класс матриц Matrix.
- Пока матрицы умеют складываться (+,+=), умножаться (*, *=), транспонироваться
- и даже(!) возводиться в степень. (UPD : они уже много чего умеют)
+Пока матрицы умеют складываться (+,+=), умножаться (*, *=), транспонироваться
+и даже(!) возводиться в степень. (UPD : они уже много чего умеют)
  Есть 3 конструктора :
  Matrix() - матрица ранга 0.
  Matrix(int n) - единичная матрица ранга n.
@@ -18,8 +18,10 @@ namespace MyMatrix
 {
 class Matrix
 {
-public:
+private:
   std::vector<std::vector<double> > _data = {};
+
+public:
   // Просто какая-то пустая матрица нулевой размерности
   Matrix () {}
 
@@ -265,35 +267,112 @@ public:
 
   double norm3 () { return 3; }
 
-  friend Matrix transpose (Matrix &m);
+  friend Matrix transpose (Matrix &m)
+  {
+    Matrix m_copy;
+
+    std::vector<double> curr_row = {};
+
+    for (size_t j = 0; j < m.getColumnLen (); j++)
+    {
+      for (size_t i = 0; i < m.getRowLen (); i++)
+        curr_row.push_back (0);
+
+      m_copy._data.push_back (curr_row);
+      curr_row = {};
+    }
+
+    for (size_t i = 0; i < m.getRowLen (); i++)
+    {
+      for (size_t j = 0; j < m.getColumnLen (); j++)
+        m_copy.setElem (j, i, m.getElem (i, j));
+    }
+
+    return m_copy;
+  }
 };
 }
 
 using namespace MyMatrix;
 
-Matrix transpose (Matrix &m)
+// ссылку для аргумента matrix пришлось убрать, чтобы в cout можно было
+// подавать выражения из матриц
+std::ostream &operator<< (std::ostream &out, Matrix matrix)
 {
-  Matrix m_copy;
+  int max_len_of_elem  = 0;
+  int curr_len_of_elem = 0;
+  int diff             = 0;
 
-  std::vector<double> curr_row = {};
-
-  for (size_t j = 0; j < m.getColumnLen (); j++)
+  for (size_t i = 0; i < matrix.getRowLen (); i++)
   {
-    for (size_t i = 0; i < m.getRowLen (); i++)
-      curr_row.push_back (0);
-
-    m_copy._data.push_back (curr_row);
-    curr_row = {};
+    for (size_t j = 0; j < matrix.getColumnLen (); j++)
+    {
+      curr_len_of_elem = std::to_string (matrix.getElem (i, j)).length ();
+      max_len_of_elem  = std::max (curr_len_of_elem, max_len_of_elem);
+    }
   }
 
-  for (size_t i = 0; i < m.getRowLen (); i++)
+  for (size_t i = 0; i < matrix.getRowLen (); i++)
   {
-    for (size_t j = 0; j < m.getColumnLen (); j++)
-      m_copy.setElem (j, i, m.getElem (i, j));
-  }
+    out << "|";
+    for (size_t j = 0; j < matrix.getColumnLen (); j++)
+    {
+      diff
+          = max_len_of_elem - std::to_string (matrix.getElem (i, j)).length ();
 
-  return m_copy;
+      for (size_t k = 0; k < diff; k++)
+        out << " ";
+
+      out << matrix.getElem (i, j);
+      if (j != matrix.getColumnLen () - 1)
+        out << " ";
+    }
+    out << "|" << std::endl;
+  }
+  out << std::endl;
+  return out;
 }
+
+// определитель, ищем по определению со сложностью O(n!)
+double det (Matrix m)
+{
+  if (!(m.isSquare ()))
+  {
+    std::cout << "Error : det() requires square matrix\n";
+    exit (1);
+  }
+
+  if (m.getRowLen () == 2)
+  {
+    return m.getElem (0, 0) * m.getElem (1, 1)
+           - m.getElem (0, 1) * m.getElem (1, 0);
+  }
+
+  double res = 0;
+  Matrix minor (m.getRowLen () - 1, m.getRowLen () - 1);
+
+  for (int i = 0; i < m.getRowLen (); i++)
+  {
+    for (int j = 1; j < m.getRowLen (); j++)
+    {
+      for (int k = 0; k < m.getColumnLen (); k++)
+      {
+        // std::cout << minor;
+        if (k < i)
+          minor.setElem (j - 1, k, m.getElem (j, k));
+        else if (k > i)
+          minor.setElem (j - 1, k - 1, m.getElem (j, k));
+      }
+    }
+
+    res += m.getElem (0, i) * pow (-1, i) * det (minor);
+  }
+
+  return res;
+}
+
+// Обратная (пока неправильно)                     ???????????
+Matrix reverse (Matrix m) { return (1 / det (m)) * transpose (m); }
 
 Matrix Diag (Matrix m)
 {
@@ -461,49 +540,8 @@ bool compare_vectors (std::vector<double> &v1, std::vector<double> &v2)
   return true;
 }
 
-// Решение СЛУ nxn методом Якоби
-std::vector<double> solve_LDU_Jacobi (Matrix &m, std::vector<double> f)
-{
-  if (!m.isSquare ())
-  {
-    printf ("Error : solve_LDU_Jacobi() requires square matrix\n");
-    exit (1);
-  }
-  int n = m.getRowLen ();
-
-  std::vector<double> prev_res = {};
-  std::vector<double> res      = {};
-
-  for (int i = 0; i < n; i++)
-  {
-    prev_res.push_back (0);
-    res.push_back (1);
-  }
-  double curr_sum = 0;
-
-  while (!compare_vectors (res, prev_res))
-  {
-    for (int i = 0; i < n; i++)
-    {
-      prev_res = res;
-      curr_sum = 0;
-      for (int j = 0; j < n; j++)
-      {
-        if (j != i)
-        {
-          curr_sum += m.getElem (i, j) * prev_res[j];
-        }
-      }
-
-      res[i] = (f[i] - curr_sum) / m.getElem (i, i);
-    }
-  }
-
-  return res;
-}
-
 // Красивый вывод СЛУ
-void print_LDU (Matrix &matrix, std::vector<double> f)
+void print_SLE (Matrix &matrix, std::vector<double> f)
 {
   int max_len_of_elem  = 0;
   int curr_len_of_elem = 0;
@@ -562,12 +600,40 @@ void print_LDU (Matrix &matrix, std::vector<double> f)
   }
 }
 
-// То же самое, что и функция выше, но еще печатает все итерации
-void print_LDU_Jacobi (Matrix &m, std::vector<double> f)
+// Можно проверить матрицу на диагональное преобладание, прежде чем сувать ее в
+// метод Якоби
+bool diag_dominance (Matrix m)
 {
   if (!m.isSquare ())
   {
-    printf ("Error : solve_LDU_Jacobi() requires square matrix\n");
+    printf ("Error: diag_dominance requires square matrix\n");
+    exit (1);
+  }
+
+  double curr_sum = 0;
+  for (int i = 0; i < m.getRowLen (); i++)
+  {
+    curr_sum = 0;
+    for (int j = 0; j < m.getColumnLen (); j++)
+    {
+      if (i != j)
+      {
+        curr_sum += fabs (m.getElem (i, j));
+      }
+    }
+    if (fabs (m.getElem (i, i) <= curr_sum))
+      return false;
+  }
+
+  return true;
+}
+
+// Решение СЛУ nxn методом Якоби
+std::vector<double> solve_SLE_Jacobi (Matrix &m, std::vector<double> f)
+{
+  if (!m.isSquare ())
+  {
+    printf ("Error : solve_SLE_Jacobi() requires square matrix\n");
     exit (1);
   }
   int n = m.getRowLen ();
@@ -578,13 +644,12 @@ void print_LDU_Jacobi (Matrix &m, std::vector<double> f)
   for (int i = 0; i < n; i++)
   {
     prev_res.push_back (0);
-    res.push_back (1);
+    res.push_back (f[i] / m.getElem (i, i));
   }
   double curr_sum = 0;
-  int    count    = 0;
 
-  std::cout << "---Решаем методом Якоби систему :\n";
-  print_LDU (m, f);
+  // счетчик итераций
+  int iter_num = 0;
   while (!compare_vectors (res, prev_res))
   {
     for (int i = 0; i < n; i++)
@@ -601,11 +666,65 @@ void print_LDU_Jacobi (Matrix &m, std::vector<double> f)
 
       res[i] = (f[i] - curr_sum) / m.getElem (i, i);
     }
-    count++;
+    iter_num++;
+    if (iter_num == 100)
+    {
+      printf ("Error : too many iterations in Jacobi method\n");
+      exit (1);
+    }
+  }
 
-    if (count == 10)
-      return;
-    std::cout << count << "-ая итерация ";
+  return res;
+}
+
+// Красивый вывод метода Якоби,печатает все итерации
+void print_SLE_Jacobi (Matrix &m, std::vector<double> f)
+{
+  if (!m.isSquare ())
+  {
+    printf ("Error : solve_SLE_Jacobi() requires square matrix\n");
+    exit (1);
+  }
+  int n = m.getRowLen ();
+
+  std::vector<double> prev_res = {};
+  std::vector<double> res      = {};
+
+  for (int i = 0; i < n; i++)
+  {
+    prev_res.push_back (0);
+    res.push_back (f[i] / m.getElem (i, i));
+  }
+  double curr_sum = 0;
+  int    iter_num = 0;
+
+  std::cout << "---Решаем методом Якоби систему :\n";
+  print_SLE (m, f);
+  while (!compare_vectors (res, prev_res))
+  {
+    for (int i = 0; i < n; i++)
+    {
+      prev_res = res;
+      curr_sum = 0;
+      for (int j = 0; j < n; j++)
+      {
+        if (j != i)
+        {
+          curr_sum += m.getElem (i, j) * prev_res[j];
+        }
+      }
+
+      res[i] = (f[i] - curr_sum) / m.getElem (i, i);
+    }
+    iter_num++;
+
+    if (iter_num == 100)
+    {
+      printf ("Error : too many iterations in Jacobi method\n");
+      exit (1);
+    }
+
+    std::cout << iter_num << "-ая итерация ";
     for (int i = 0; i < res.size (); i++)
       std::cout << "x" << i + 1 << "=" << res[i] << " ";
     std::cout << std::endl;
@@ -618,11 +737,11 @@ void print_LDU_Jacobi (Matrix &m, std::vector<double> f)
   std::cout << std::endl;
 }
 
-std::vector<double> solve_LDU_Seidel (Matrix &m, std::vector<double> f)
+std::vector<double> solve_SLE_Seidel (Matrix &m, std::vector<double> f)
 {
   if (!m.isSquare ())
   {
-    printf ("Error : solve_LDU_Seidel() requires square matrix\n");
+    printf ("Error : solve_SLE_Seidel() requires square matrix\n");
     exit (1);
   }
 
@@ -634,9 +753,10 @@ std::vector<double> solve_LDU_Seidel (Matrix &m, std::vector<double> f)
   for (int i = 0; i < n; i++)
   {
     prev_res.push_back (0);
-    res.push_back (1);
+    res.push_back (f[i] / m.getElem (i, i));
   }
   double curr_sum = 0;
+  int    iter_num = 0;
 
   while (!compare_vectors (res, prev_res))
   {
@@ -653,6 +773,13 @@ std::vector<double> solve_LDU_Seidel (Matrix &m, std::vector<double> f)
       }
 
       res[i] = (f[i] - curr_sum) / m.getElem (i, i);
+    }
+
+    iter_num++;
+    if (iter_num == 100)
+    {
+      printf ("Error : too many iterations in Seidel method\n");
+      exit (1);
     }
   }
 
@@ -660,11 +787,11 @@ std::vector<double> solve_LDU_Seidel (Matrix &m, std::vector<double> f)
 }
 
 // То же самое, что и функция выше, но еще печатает все итерации
-void print_LDU_Seidel (Matrix &m, std::vector<double> f)
+void print_SLE_Seidel (Matrix &m, std::vector<double> f)
 {
   if (!m.isSquare ())
   {
-    printf ("Error : solve_LDU_Seidel() requires square matrix\n");
+    printf ("Error : solve_SLE_Seidel() requires square matrix\n");
     exit (1);
   }
   int n = m.getRowLen ();
@@ -675,13 +802,13 @@ void print_LDU_Seidel (Matrix &m, std::vector<double> f)
   for (int i = 0; i < n; i++)
   {
     prev_res.push_back (0);
-    res.push_back (1);
+    res.push_back (f[i] / m.getElem (i, i));
   }
   double curr_sum = 0;
-  int    count    = 0;
+  int    iter_num = 0;
 
   std::cout << "---Решаем методом Зейделя систему :\n";
-  print_LDU (m, f);
+  print_SLE (m, f);
   while (!compare_vectors (res, prev_res))
   {
     for (int i = 0; i < n; i++)
@@ -699,8 +826,14 @@ void print_LDU_Seidel (Matrix &m, std::vector<double> f)
       res[i] = (f[i] - curr_sum) / m.getElem (i, i);
     }
 
-    count++;
-    std::cout << count << "-ая итерация ";
+    iter_num++;
+    if (iter_num == 100)
+    {
+      printf ("Error : too many iterations in Seidel method\n");
+      exit (1);
+    }
+
+    std::cout << iter_num << "-ая итерация ";
     for (int i = 0; i < res.size (); i++)
       std::cout << "x" << i + 1 << "=" << res[i] << " ";
     std::cout << std::endl;
@@ -712,42 +845,17 @@ void print_LDU_Seidel (Matrix &m, std::vector<double> f)
   std::cout << std::endl;
 }
 
-// ссылку для аргумента matrix пришлось убрать, чтобы в cout можно было
-// подавать выражения из матриц
-std::ostream &operator<< (std::ostream &out, Matrix matrix)
+// Переопределенная система (после приведения к нормальному виду считаю методом
+// Якоби)
+std::vector<bool> solve_overdetermined_SLE (Matrix m, std::vector<double> f)
 {
-  int max_len_of_elem  = 0;
-  int curr_len_of_elem = 0;
-  int diff             = 0;
+  return solve_SLE_Jacobi (transpose (m) * m, transpose (m) * f);
+}
 
-  for (size_t i = 0; i < matrix.getRowLen (); i++)
-  {
-    for (size_t j = 0; j < matrix.getColumnLen (); j++)
-    {
-      curr_len_of_elem = std::to_string (matrix.getElem (i, j)).length ();
-      max_len_of_elem  = std::max (curr_len_of_elem, max_len_of_elem);
-    }
-  }
-
-  for (size_t i = 0; i < matrix.getRowLen (); i++)
-  {
-    out << "|";
-    for (size_t j = 0; j < matrix.getColumnLen (); j++)
-    {
-      diff
-          = max_len_of_elem - std::to_string (matrix.getElem (i, j)).length ();
-
-      for (size_t k = 0; k < diff; k++)
-        out << " ";
-
-      out << matrix.getElem (i, j);
-      if (j != matrix.getColumnLen () - 1)
-        out << " ";
-    }
-    out << "|" << std::endl;
-  }
-  out << std::endl;
-  return out;
+// Просто напечатать нормальный вид переопределенной системы (не решая)
+void print_overdetermined_SLE (Matrix m, std::vector<double> f)
+{
+  print_SLE (transpose (m) * m, transpose (m) * f);
 }
 
 int main ()
@@ -803,17 +911,24 @@ int main ()
       { 2, 2 }
   });
 
-  Matrix              m11 ({
+  Matrix m11 ({
       { 2, -2,  1 },
       { 1,  3, -2 },
       { 3, -1, -1 }
   });
+
+  Matrix m12 ({
+      { 10, -2,  1 },
+      {  2, 20,  5 },
+      {  3, -4, 30 }
+  });
+
   std::vector<double> f  = { -1, 2 };
   std::vector<double> f1 = { -3, 1, 2 };
 
-  print_LDU_Jacobi (m11, f1);
+  print_SLE_Seidel (m12, f1);
   std::cout << std::endl;
-  print_LDU_Seidel (m11, f1);
+  // print_SLE_Seidel (m11, f1);
   //  std::cout << res;
   return 0;
 }
