@@ -186,6 +186,32 @@ public:
     return tmp_m;
   }
 
+  friend std::vector<double> operator* (Matrix m1, std::vector<double> v)
+  {
+    Matrix m2 (v.size (), 1);
+
+    for (int i = 0; i < v.size (); i++)
+    {
+      m2.setElem (i, 0, v[i]);
+    }
+
+    if (m1.getColumnLen () != m2.getRowLen ())
+    {
+      std::cout << "Error : inequal dimensions for multiplication\n";
+      exit (1);
+    }
+    Matrix tmp_m = m1;
+    tmp_m *= m2;
+
+    std::vector<double> res;
+
+    for (int i = 0; i < tmp_m.getRowLen (); i++)
+    {
+      res.push_back (tmp_m.getElem (i, 0));
+    }
+    return res;
+  }
+
   friend Matrix operator* (double num, Matrix m)
   {
     Matrix tmp_m = m;
@@ -541,7 +567,7 @@ bool compare_vectors (std::vector<double> &v1, std::vector<double> &v2)
 }
 
 // Красивый вывод СЛУ
-void print_SLE (Matrix &matrix, std::vector<double> f)
+void print_SLE (Matrix matrix, std::vector<double> f)
 {
   int max_len_of_elem  = 0;
   int curr_len_of_elem = 0;
@@ -629,7 +655,7 @@ bool diag_dominance (Matrix m)
 }
 
 // Решение СЛУ nxn методом Якоби
-std::vector<double> solve_SLE_Jacobi (Matrix &m, std::vector<double> f)
+std::vector<double> solve_SLE_Jacobi (Matrix m, std::vector<double> f)
 {
   if (!m.isSquare ())
   {
@@ -678,7 +704,7 @@ std::vector<double> solve_SLE_Jacobi (Matrix &m, std::vector<double> f)
 }
 
 // Красивый вывод метода Якоби,печатает все итерации
-void print_SLE_Jacobi (Matrix &m, std::vector<double> f)
+void print_SLE_Jacobi (Matrix m, std::vector<double> f)
 {
   if (!m.isSquare ())
   {
@@ -737,7 +763,7 @@ void print_SLE_Jacobi (Matrix &m, std::vector<double> f)
   std::cout << std::endl;
 }
 
-std::vector<double> solve_SLE_Seidel (Matrix &m, std::vector<double> f)
+std::vector<double> solve_SLE_Seidel (Matrix m, std::vector<double> f)
 {
   if (!m.isSquare ())
   {
@@ -787,7 +813,7 @@ std::vector<double> solve_SLE_Seidel (Matrix &m, std::vector<double> f)
 }
 
 // То же самое, что и функция выше, но еще печатает все итерации
-void print_SLE_Seidel (Matrix &m, std::vector<double> f)
+void print_SLE_Seidel (Matrix m, std::vector<double> f)
 {
   if (!m.isSquare ())
   {
@@ -847,7 +873,7 @@ void print_SLE_Seidel (Matrix &m, std::vector<double> f)
 
 // Переопределенная система (после приведения к нормальному виду считаю методом
 // Якоби)
-std::vector<bool> solve_overdetermined_SLE (Matrix m, std::vector<double> f)
+std::vector<double> solve_overdetermined_SLE (Matrix m, std::vector<double> f)
 {
   return solve_SLE_Jacobi (transpose (m) * m, transpose (m) * f);
 }
@@ -927,7 +953,16 @@ int main ()
   std::vector<double> f1 = { -3, 1, 2 };
 
   print_SLE_Seidel (m12, f1);
+
+  Matrix              m13 ({
+      { 3, -1 },
+      { 5, -2 },
+      { 6, -3 }
+  });
+  std::vector<double> f2 = { 1, 2, 3 };
+  print_overdetermined_SLE (m13, f2);
   std::cout << std::endl;
+
   // print_SLE_Seidel (m11, f1);
   //  std::cout << res;
   return 0;
