@@ -222,7 +222,7 @@ public:
 
   friend Matrix operator* (Matrix m, double num) { return num * m; }
 
-  Matrix pow (unsigned int n)
+  Matrix powm (unsigned int n)
   {
     if (!isSquare ())
     {
@@ -256,6 +256,121 @@ public:
 
     return res;
   }
+
+  friend Matrix transpose (Matrix m)
+  {
+    Matrix m_copy;
+
+    std::vector<double> curr_row = {};
+
+    for (size_t j = 0; j < m.getColumnLen (); j++)
+    {
+      for (size_t i = 0; i < m.getRowLen (); i++)
+        curr_row.push_back (0);
+
+      m_copy._data.push_back (curr_row);
+      curr_row = {};
+    }
+
+    for (size_t i = 0; i < m.getRowLen (); i++)
+    {
+      for (size_t j = 0; j < m.getColumnLen (); j++)
+        m_copy.setElem (j, i, m.getElem (i, j));
+    }
+
+    return m_copy;
+  }
+
+  // определитель, ищем по определению со сложностью O(n!)
+  friend double det (Matrix m)
+  {
+    if (!(m.isSquare ()))
+    {
+      std::cout << "Error : det() requires square matrix\n";
+      exit (1);
+    }
+
+    if (m.getRowLen () == 2)
+    {
+      return m.getElem (0, 0) * m.getElem (1, 1)
+             - m.getElem (0, 1) * m.getElem (1, 0);
+    }
+
+    double res = 0;
+    Matrix minor (m.getRowLen () - 1, m.getRowLen () - 1);
+
+    for (int i = 0; i < m.getRowLen (); i++)
+    {
+      for (int j = 1; j < m.getRowLen (); j++)
+      {
+        for (int k = 0; k < m.getColumnLen (); k++)
+        {
+          // std::cout << minor;
+          if (k < i)
+            minor.setElem (j - 1, k, m.getElem (j, k));
+          else if (k > i)
+            minor.setElem (j - 1, k - 1, m.getElem (j, k));
+        }
+      }
+
+      res += m.getElem (0, i) * pow (-1, i) * det (minor);
+    }
+
+    return res;
+  }
+
+  // пока только 2x2
+  friend std::vector<double> eigenvalues (Matrix m)
+  {
+    if (!m.isSquare ())
+    {
+      std::cout << "Error : eigenvalues() requres square matrix\n";
+      exit (1);
+    }
+
+    if (m.getRowLen () != 2)
+    {
+      std::cout << "Error : eigenvalues() calculates only 2x2 matrixes\n";
+      exit (1);
+    }
+
+    std::vector<double> res = {};
+    //(l - a11)(l - a22) - a12*a21; l*l - l*a22 -l*a11 + a11*a22 - a12*a21
+    sq_equation_t det;
+    det.a = 1;
+    det.b = -(m.getElem (0, 0) + m.getElem (1, 1));
+    det.c = m.getElem (0, 0) * m.getElem (1, 1)
+            - m.getElem (0, 1) * m.getElem (1, 0);
+
+    roots *r;
+
+    int exit_code = solve (&det, r);
+    switch (exit_code)
+    {
+    case NO_ROOTS:
+      break;
+
+    case INF_ROOTS:
+      break;
+
+    case ONE_ROOT:
+      res.push_back (r->x1);
+      break;
+
+    case TWO_ROOTS:
+      res.push_back (r->x1);
+      res.push_back (r->x2);
+      break;
+
+    default:
+      printf ("Error : eigenvalues root amount error\n");
+    }
+
+    return res;
+  }
+
+  // Обратная (пока неправильно)                     ???????????
+  friend Matrix reverse (Matrix m) { return (1 / det (m)) * transpose (m); }
 
   double norm1 ()
   {
@@ -291,31 +406,31 @@ public:
     return max_sum;
   }
 
-  double norm3 () { return 3; }
-
-  friend Matrix transpose (Matrix &m)
+  double norm3 ()
   {
-    Matrix m_copy;
-
-    std::vector<double> curr_row = {};
-
-    for (size_t j = 0; j < m.getColumnLen (); j++)
-    {
-      for (size_t i = 0; i < m.getRowLen (); i++)
-        curr_row.push_back (0);
-
-      m_copy._data.push_back (curr_row);
-      curr_row = {};
-    }
-
-    for (size_t i = 0; i < m.getRowLen (); i++)
-    {
-      for (size_t j = 0; j < m.getColumnLen (); j++)
-        m_copy.setElem (j, i, m.getElem (i, j));
-    }
-
-    return m_copy;
+    std::vector<double> e = eigenvalues (*this);
+    return pow (*std::max_element (e.begin (), e.end ()), 1 / 2)
+           * det (transpose (*this)) * det (*this);
   }
+
+  // число обусловленностей по конкретной норме
+  friend double myu (Matrix m, unsigned int norm)
+  {
+    switch (norm)
+    {
+    case 1:
+      return m.norm1 () * reverse (m).norm1 ();
+    case 2:
+      return m.norm2 () * reverse (m).norm2 ();
+    case 3:
+      return m.norm3 () * reverse (m).norm3 ();
+    }
+
+    printf ("Error : bad norm number in myu()\n");
+    exit (1);
+
+    return -1;
+  };
 };
 }
 
@@ -359,47 +474,6 @@ std::ostream &operator<< (std::ostream &out, Matrix matrix)
   return out;
 }
 
-// определитель, ищем по определению со сложностью O(n!)
-double det (Matrix m)
-{
-  if (!(m.isSquare ()))
-  {
-    std::cout << "Error : det() requires square matrix\n";
-    exit (1);
-  }
-
-  if (m.getRowLen () == 2)
-  {
-    return m.getElem (0, 0) * m.getElem (1, 1)
-           - m.getElem (0, 1) * m.getElem (1, 0);
-  }
-
-  double res = 0;
-  Matrix minor (m.getRowLen () - 1, m.getRowLen () - 1);
-
-  for (int i = 0; i < m.getRowLen (); i++)
-  {
-    for (int j = 1; j < m.getRowLen (); j++)
-    {
-      for (int k = 0; k < m.getColumnLen (); k++)
-      {
-        // std::cout << minor;
-        if (k < i)
-          minor.setElem (j - 1, k, m.getElem (j, k));
-        else if (k > i)
-          minor.setElem (j - 1, k - 1, m.getElem (j, k));
-      }
-    }
-
-    res += m.getElem (0, i) * pow (-1, i) * det (minor);
-  }
-
-  return res;
-}
-
-// Обратная (пока неправильно)                     ???????????
-Matrix reverse (Matrix m) { return (1 / det (m)) * transpose (m); }
-
 Matrix Diag (Matrix m)
 {
   if (!(m.isSquare ()))
@@ -417,7 +491,7 @@ Matrix Diag (Matrix m)
   return D;
 }
 
-Matrix Lower (Matrix &m)
+Matrix Lower (Matrix m)
 {
   if (!(m.isSquare ()))
   {
@@ -438,7 +512,7 @@ Matrix Lower (Matrix &m)
   return L;
 }
 
-Matrix Upper (Matrix &m)
+Matrix Upper (Matrix m)
 {
   if (!(m.isSquare ()))
   {
@@ -459,65 +533,12 @@ Matrix Upper (Matrix &m)
   return U;
 }
 
-// пока только 2x2
-std::vector<double> eigenvalues (Matrix m)
-{
-  if (!m.isSquare ())
-  {
-    std::cout << "Error : eigenvalues() requres square matrix\n";
-    exit (1);
-  }
-
-  if (m.getRowLen () != 2)
-  {
-    std::cout << "Error : eigenvalues() calculates only 2x2 matrixes\n";
-    exit (1);
-  }
-
-  std::vector<double> res = {};
-  //(l - a11)(l - a22) - a12*a21; l*l - l*a22 -l*a11 + a11*a22 - a12*a21
-  sq_equation_t det;
-
-  det.a = 1;
-  det.b = -(m.getElem (0, 0) + m.getElem (1, 1));
-  det.c = m.getElem (0, 0) * m.getElem (1, 1)
-          - m.getElem (0, 1) * m.getElem (1, 0);
-
-  roots *r;
-
-  int exit_code = solve (&det, r);
-
-  switch (exit_code)
-  {
-  case NO_ROOTS:
-    break;
-
-  case INF_ROOTS:
-    break;
-
-  case ONE_ROOT:
-    res.push_back (r->x1);
-    break;
-
-  case TWO_ROOTS:
-    res.push_back (r->x1);
-    res.push_back (r->x2);
-    break;
-
-  default:
-    printf ("Error : eigenvalues root amount error\n");
-  }
-
-  return res;
-}
-
 // спектральный радиус (только для матрицы 2x2)
 double spectral_radius (Matrix m)
 {
-
   if (!m.isSquare ())
   {
-    std::cout << "Error : spectral_radius() requres square matrix\n";
+    std::cout << "Error : spectral_radius() requires square matrix\n";
     exit (1);
   }
 
@@ -537,14 +558,22 @@ double spectral_radius (Matrix m)
 
   std::vector<double> ev = eigenvalues (Rj);
   std::vector<double> abs_ev;
+
   for (double x : ev)
     abs_ev.push_back (std::fabs (x));
 
+  if (abs_ev.size () == 0)
+  {
+    std::cout << "0 eigenvalues";
+    exit (1);
+  }
+  if (abs_ev.size () == 1)
+    return abs_ev[0];
   return *std::max_element (abs_ev.begin (), abs_ev.end ());
 }
 
 // оптимальный параметр релаксации
-double opt_relax_param (Matrix &m)
+double opt_relax_param (Matrix m)
 {
   return 2.0 / (1 + std::sqrt (1 - pow (spectral_radius (m), 2)));
 }
@@ -558,7 +587,7 @@ bool compare_vectors (std::vector<double> &v1, std::vector<double> &v2)
     exit (1);
   }
 
-  double EPSILON = 0.000001;
+  double EPSILON = 0.001;
   for (int i = 0; i < v1.size (); i++)
     if (fabs (v1[i] - v2[i]) > EPSILON)
       return false;
@@ -670,7 +699,8 @@ std::vector<double> solve_SLE_Jacobi (Matrix m, std::vector<double> f)
   for (int i = 0; i < n; i++)
   {
     prev_res.push_back (0);
-    res.push_back (f[i] / m.getElem (i, i));
+    res.push_back (1);
+    // res.push_back (f[i] / m.getElem (i, i));
   }
   double curr_sum = 0;
 
@@ -719,11 +749,19 @@ void print_SLE_Jacobi (Matrix m, std::vector<double> f)
   for (int i = 0; i < n; i++)
   {
     prev_res.push_back (0);
-    res.push_back (f[i] / m.getElem (i, i));
+    res.push_back (1);
+    // res.push_back (f[i] / m.getElem (i, i));
   }
   double curr_sum = 0;
   int    iter_num = 0;
 
+  auto r0 = m * res;
+
+  for (int j = 0; j < f.size (); j++)
+  {
+    r0[j] -= f[j];
+  }
+  std::cout << "Начальная невзяка : " << r0 << std::endl;
   std::cout << "---Решаем методом Якоби систему :\n";
   print_SLE (m, f);
   while (!compare_vectors (res, prev_res))
@@ -750,10 +788,16 @@ void print_SLE_Jacobi (Matrix m, std::vector<double> f)
       exit (1);
     }
 
+    auto r = m * res;
+
+    for (int j = 0; j < f.size (); j++)
+    {
+      r[j] -= f[j];
+    }
     std::cout << iter_num << "-ая итерация ";
     for (int i = 0; i < res.size (); i++)
       std::cout << "x" << i + 1 << "=" << res[i] << " ";
-    std::cout << std::endl;
+    std::cout << "Невязка :" << r << std::endl;
   }
 
   std::cout << "Результат : ";
@@ -779,7 +823,8 @@ std::vector<double> solve_SLE_Seidel (Matrix m, std::vector<double> f)
   for (int i = 0; i < n; i++)
   {
     prev_res.push_back (0);
-    res.push_back (f[i] / m.getElem (i, i));
+    res.push_back (1);
+    // res.push_back (f[i] / m.getElem (i, i));
   }
   double curr_sum = 0;
   int    iter_num = 0;
@@ -788,7 +833,6 @@ std::vector<double> solve_SLE_Seidel (Matrix m, std::vector<double> f)
   {
     for (int i = 0; i < n; i++)
     {
-      prev_res = res;
       curr_sum = 0;
       for (int j = 0; j < n; j++)
       {
@@ -798,7 +842,8 @@ std::vector<double> solve_SLE_Seidel (Matrix m, std::vector<double> f)
         }
       }
 
-      res[i] = (f[i] - curr_sum) / m.getElem (i, i);
+      res[i]   = (f[i] - curr_sum) / m.getElem (i, i);
+      prev_res = res;
     }
 
     iter_num++;
@@ -828,7 +873,8 @@ void print_SLE_Seidel (Matrix m, std::vector<double> f)
   for (int i = 0; i < n; i++)
   {
     prev_res.push_back (0);
-    res.push_back (f[i] / m.getElem (i, i));
+    res.push_back (1);
+    // res.push_back (f[i] / m.getElem (i, i));
   }
   double curr_sum = 0;
   int    iter_num = 0;
@@ -859,16 +905,61 @@ void print_SLE_Seidel (Matrix m, std::vector<double> f)
       exit (1);
     }
 
+    auto r = m * res;
+
+    for (int j = 0; j < f.size (); j++)
+    {
+      r[j] -= f[j];
+    }
     std::cout << iter_num << "-ая итерация ";
     for (int i = 0; i < res.size (); i++)
       std::cout << "x" << i + 1 << "=" << res[i] << " ";
-    std::cout << std::endl;
+    std::cout << "Невязка " << r << std::endl;
   }
   std::cout << "Результат : ";
 
   for (int i = 0; i < res.size (); i++)
     std::cout << "x" << i + 1 << "=" << res[i] << " ";
   std::cout << std::endl;
+}
+
+double sum_of_vec (std::vector<double> v)
+{
+  double a = 0;
+  for (int i = 0; i < v.size (); i++)
+  {
+    a += v[i];
+  }
+  return a;
+}
+
+double sum_of_vec_square (std::vector<double> v)
+{
+  double a = 0;
+  for (int i = 0; i < v.size (); i++)
+  {
+    a += v[i] * v[i];
+  }
+  return a;
+}
+double scal_dot (std::vector<double> x, std::vector<double> y)
+{
+  double a = 0;
+  for (int i = 0; i < x.size (); i++)
+  {
+    a += x[i] * y[i];
+  }
+  return a;
+}
+
+// Метод наименьших квадратов
+std::vector<double> LSM (std::vector<double> x, std::vector<double> y)
+{
+  double k = (x.size () * scal_dot (x, y) - sum_of_vec (x) * sum_of_vec (y))
+             / (x.size () * sum_of_vec_square (x)
+                - sum_of_vec (x) * sum_of_vec (x));
+  double b = sum_of_vec (y) - k * (sum_of_vec (x));
+  return { k, b };
 }
 
 // Переопределенная система (после приведения к нормальному виду считаю методом
@@ -878,92 +969,58 @@ std::vector<double> solve_overdetermined_SLE (Matrix m, std::vector<double> f)
   return solve_SLE_Jacobi (transpose (m) * m, transpose (m) * f);
 }
 
-// Просто напечатать нормальный вид переопределенной системы (не решая)
-void print_overdetermined_SLE (Matrix m, std::vector<double> f)
+// Просто напечатать нормальный вид системы (не решая)
+void print_normalized_SLE (Matrix m, std::vector<double> f)
 {
   print_SLE (transpose (m) * m, transpose (m) * f);
 }
 
 int main ()
 {
-  Matrix m1;
-  Matrix m2 = Matrix ({
-      { 1, 2, 5 },
-      { 3, 4, 7 },
-      { 1, 5, 4 }
+  // номер 2
+  // 1)
+  Matrix              a1 ({
+      { 11, -9 },
+      { -9, 11 }
   });
-  Matrix m3 = Matrix ({
-      {   3, 17,  6 },
-      {   4,  0, 12 },
-      { 192,  2,  9 }
+  std::vector<double> f1 = { 3, -1 };
+  std::cout << myu (a1, 1) << std::endl;
+  std::cout << myu (a1, 2) << std::endl;
+  // std::cout << myu (a1, 3) << std::endl;
+  //   2)
+  print_SLE_Jacobi (a1, f1);
+  print_SLE_Seidel (a1, f1);
+  // здесь начал выскакивать сегфолт
+  // double t_opt = opt_relax_param (a1);
+  // std::cout << "Оптимальный параметр релаксации " << t_opt << std::endl;
+
+  // номер 3
+  // 1)
+  Matrix              a2 ({
+      { -1, 1 },
+      {  4, 3 }
   });
+  std::vector<double> f2 = { 2, -1 };
+  print_normalized_SLE (a2, f2);
 
-  Matrix m4 = Matrix ({
-      { 1, 2, 3 },
-      { 4, 5, 6 }
+  // auto at = transpose (a2) * a2;
+  // std::cout << opt_relax_param (at);
+
+  // Номер 4
+  Matrix              a3 ({
+      {  2, -1 },
+      { -2,  3 },
+      { -2,  1 }
   });
-
-  Matrix m5 = Matrix ({
-      { 1, 2 },
-      { 3, 4 },
-      { 5, 6 }
-  });
-
-  Matrix m6 ({
-      { 1, 2, 3, 4, 5, 6 },
-      { 6, 7, 8, 9, 1, 7 },
-      { 2, 3, 4, 5, 6, 8 },
-      { 7, 8, 9, 1, 2, 9 },
-      { 3, 4, 5, 6, 7, 1 },
-      { 2, 4, 5, 6, 7, 8 }
-  });
-
-  Matrix m7 ({
-      { 1, 2 },
-      { 3, 4 }
-  });
-
-  Matrix m8 ({
-      { 5, 1 },
-      { 1, 3 }
-  });
-
-  Matrix m9 ({
-      { 3, 1 },
-      { 1, 3 }
-  });
-  Matrix m10 ({
-      { 1, 1 },
-      { 2, 2 }
-  });
-
-  Matrix m11 ({
-      { 2, -2,  1 },
-      { 1,  3, -2 },
-      { 3, -1, -1 }
-  });
-
-  Matrix m12 ({
-      { 10, -2,  1 },
-      {  2, 20,  5 },
-      {  3, -4, 30 }
-  });
-
-  std::vector<double> f  = { -1, 2 };
-  std::vector<double> f1 = { -3, 1, 2 };
-
-  print_SLE_Seidel (m12, f1);
-
-  Matrix              m13 ({
-      { 3, -1 },
-      { 5, -2 },
-      { 6, -3 }
-  });
-  std::vector<double> f2 = { 1, 2, 3 };
-  print_overdetermined_SLE (m13, f2);
-  std::cout << std::endl;
-
-  // print_SLE_Seidel (m11, f1);
-  //  std::cout << res;
+  std::vector<double> f3 = { 1, 2, 0 };
+  std::vector<double> x1 = { -2, -2 / 3., -2 };
+  std::vector<double> y1 = { -1, 2 / 3., 0 };
+  print_normalized_SLE (a3, f3);
+  std::cout << "x,y: " << solve_overdetermined_SLE (a3, f3) << std::endl;
+  print_SLE_Jacobi (transpose (a3) * a3, transpose (a3) * f3);
+  // Номер 5
+  std::vector<double> x = { 0, 1, 2, 3, 7, 9 };
+  std::vector<double> y = { 1, 2, 3, 1, 2, 9 };
+  std::cout << "k,b : " << LSM (x, y);
   return 0;
 }
