@@ -333,7 +333,6 @@ public:
       std::cout << "Error : eigenvalues() calculates only 2x2 matrixes\n";
       exit (1);
     }
-
     std::vector<double> res = {};
     //(l - a11)(l - a22) - a12*a21; l*l - l*a22 -l*a11 + a11*a22 - a12*a21
     sq_equation_t det;
@@ -341,10 +340,10 @@ public:
     det.b = -(m.getElem (0, 0) + m.getElem (1, 1));
     det.c = m.getElem (0, 0) * m.getElem (1, 1)
             - m.getElem (0, 1) * m.getElem (1, 0);
-
     roots *r;
 
     int exit_code = solve (&det, r);
+
     switch (exit_code)
     {
     case NO_ROOTS:
@@ -611,8 +610,7 @@ void print_SLE (Matrix matrix, std::vector<double> f)
     }
   }
   int x_index = 0;
-
-  for (size_t i = 0; i < matrix.getRowLen (); i++)
+  for (size_t i = 0; i < f.size (); i++)
   {
     std::cout << "|";
     for (size_t j = 0; j < matrix.getColumnLen (); j++)
@@ -627,6 +625,7 @@ void print_SLE (Matrix matrix, std::vector<double> f)
       if (j != matrix.getColumnLen () - 1)
         std::cout << " ";
     }
+
     std::cout << "|";
 
     if (i >= (matrix.getRowLen () - matrix.getColumnLen ()) / 2)
@@ -643,9 +642,11 @@ void print_SLE (Matrix matrix, std::vector<double> f)
     }
     else
     {
+
       for (int k = 0; k < 3 + std::to_string (x_index).size (); k++)
         std::cout << " ";
     }
+
     if (i == matrix.getRowLen () / 2)
       std::cout << " = ";
     else
@@ -761,7 +762,7 @@ void print_SLE_Jacobi (Matrix m, std::vector<double> f)
   {
     r0[j] -= f[j];
   }
-  std::cout << "Начальная невзяка : " << r0 << std::endl;
+  std::cout << "Начальная невязяка : " << r0 << std::endl;
   std::cout << "---Решаем методом Якоби систему :\n";
   print_SLE (m, f);
   while (!compare_vectors (res, prev_res))
@@ -923,6 +924,7 @@ void print_SLE_Seidel (Matrix m, std::vector<double> f)
   std::cout << std::endl;
 }
 
+// сумма элементов вектора
 double sum_of_vec (std::vector<double> v)
 {
   double a = 0;
@@ -933,6 +935,7 @@ double sum_of_vec (std::vector<double> v)
   return a;
 }
 
+// сумма квадратов элементов вектора
 double sum_of_vec_square (std::vector<double> v)
 {
   double a = 0;
@@ -942,6 +945,8 @@ double sum_of_vec_square (std::vector<double> v)
   }
   return a;
 }
+
+// скалярное произведение sum(Xi*Yi)
 double scal_dot (std::vector<double> x, std::vector<double> y)
 {
   double a = 0;
@@ -977,7 +982,7 @@ void print_normalized_SLE (Matrix m, std::vector<double> f)
 
 int main ()
 {
-  // номер 2
+  std::cout << "номер 2\n";
   // 1)
   Matrix              a1 ({
       { 11, -9 },
@@ -987,14 +992,14 @@ int main ()
   std::cout << myu (a1, 1) << std::endl;
   std::cout << myu (a1, 2) << std::endl;
   // std::cout << myu (a1, 3) << std::endl;
-  //   2)
+  //    2)
   print_SLE_Jacobi (a1, f1);
   print_SLE_Seidel (a1, f1);
   // здесь начал выскакивать сегфолт
   // double t_opt = opt_relax_param (a1);
   // std::cout << "Оптимальный параметр релаксации " << t_opt << std::endl;
 
-  // номер 3
+  std::cout << "номер 3\n";
   // 1)
   Matrix              a2 ({
       { -1, 1 },
@@ -1003,10 +1008,9 @@ int main ()
   std::vector<double> f2 = { 2, -1 };
   print_normalized_SLE (a2, f2);
 
-  // auto at = transpose (a2) * a2;
+  auto at = transpose (a2) * a2;
   // std::cout << opt_relax_param (at);
-
-  // Номер 4
+  std::cout << "номер 4\n";
   Matrix              a3 ({
       {  2, -1 },
       { -2,  3 },
@@ -1017,8 +1021,7 @@ int main ()
   std::vector<double> y1 = { -1, 2 / 3., 0 };
   print_normalized_SLE (a3, f3);
   std::cout << "x,y: " << solve_overdetermined_SLE (a3, f3) << std::endl;
-  print_SLE_Jacobi (transpose (a3) * a3, transpose (a3) * f3);
-  // Номер 5
+  std::cout << "Номер 5\n";
   std::vector<double> x = { 0, 1, 2, 3, 7, 9 };
   std::vector<double> y = { 1, 2, 3, 1, 2, 9 };
   std::cout << "k,b : " << LSM (x, y);
