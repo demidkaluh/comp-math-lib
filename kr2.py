@@ -1,68 +1,47 @@
+from math import *
+import numpy as np
+pi = np.pi
 
-#Метод простых итераций 
-def f(x):
-    # Замените эту функцию на ваше нелинейное уравнение
-    return x**3 - x - 2
-
+#Метод простых итераций  (Задачка 1)
 def g(x):
-    # Преобразование уравнения f(x) = 0 в x = g(x)
-    return (x + 2)**(1/3)  # Пример преобразования
+    return -1/8 * (np.exp(0.5 * x + 3) + 4)
 
-def simple_iteration(g, x0, tol=1e-5, max_iter=100):
-    x_prev = x0
+def simple_iteration(g, x0=-0.5, epsilon=1e-3, max_iter=100):
+    x = x0
     for i in range(max_iter):
-        x_next = g(x_prev)
-        if abs(x_next - x_prev) < tol:
-            print(f"Найденный корень: {x_next:.5f} за {i+1} итераций.")
-            return x_next
-        x_prev = x_next
-    print("Достигнуто максимальное количество итераций.")
-    return None
+        x_new = g(x)
+        if abs(x_new - x) < epsilon:
+            return x_new, i  
+        x = x_new
 
-# Начальное приближение
-x0 = 1.0
-root = simple_iteration(g, x0)
+    return None 
 
+# Метод Ньютонa (задачка 2)
+def g_prime(x):
+    return -1/8 * (1/2*np.exp(0.5*x+3))
 
-
-
-# Метод Ньютонна
-def f_prime(x):
-    # Производная нелинейного уравнения
-    return 3*x**2 - 1
-
-def newton_method(f, f_prime, x0, tol=1e-5, max_iter=100):
+def newton_method(f, f_prime, x0 = 1.0, tol=1e-5, max_iter=100):
     x_prev = x0
     for i in range(max_iter):
         x_next = x_prev - f(x_prev) / f_prime(x_prev)
         if abs(x_next - x_prev) < tol:
-            print(f"Найденный корень: {x_next:.5f} за {i+1} итераций.")
             return x_next
         x_prev = x_next
-    print("Достигнуто максимальное количество итераций.")
+
     return None
 
-# Начальное приближение
-x0 = 1.0
-root = newton_method(f, f_prime, x0)
-
-
-
-# Метод Ньютона для системы
-import numpy as np
-
+#Система для задачи 3
 def F(x):
-    # Cистемa нелинейных уравнений
     return np.array([
-        x[0]**2 + x[1]**2 - 4,  # Уравнение 1
-        x[0]**2 - x[1] - 1      # Уравнение 2
-    ])
+        3*cos(2*pi*x[0]+pi*x[1])+2*x[0]**2+x[1]**2+x[0]*x[1]-3*x[0]-2*x[1]-2,
+        2*sin(pi*x[0]+2*pi*x[1]+pi/2)+3*x[0]**2+x[1]**2+2*x[0]*x[1]-4*x[0]-3*x[1]-3
+        ])
 
+# Ее якобиан
 def jacobian(x):
-    # Mатрицa Якоби для системы
     return np.array([
-        [2*x[0], 2*x[1]],  # Производные первого уравнения
-        [2*x[0], -1]       # Производные второго уравнения
+        [4*x[0]+x[1]-6*pi*sin(2*pi*x[0]+pi*x[1])-3, x[0]+2*x[1]-3*pi*sin(2*pi*x[0]+pi*x[1])],          
+        [6*x[0]+2*x[1]-2*pi*sin(pi*x[0]+2*pi*x[1])-4, 2*x[0]+2*x[1]-4*pi*sin(pi*x[0]+2*pi*x[1])-3]       
     ])
 
 def newton_method_system(F, jacobian, x0, tol=1e-5, max_iter=100):
@@ -70,115 +49,62 @@ def newton_method_system(F, jacobian, x0, tol=1e-5, max_iter=100):
     for i in range(max_iter):
         J = jacobian(x_prev)
         F_val = F(x_prev)
-        delta = np.linalg.solve(J, -F_val)  # Решаем систему J * delta = -F
+        delta = np.linalg.solve(J, -F_val)  
         x_next = x_prev + delta
         
         if np.linalg.norm(delta) < tol:
-            print(f"Найденный корень: {x_next} за {i+1} итераций.")
             return x_next
         x_prev = x_next
         
-    print("Достигнуто максимальное количество итераций.")
     return None
-
-# Начальное приближение
-x0 = np.array([1.0, 1.0])
-root = newton_method_system(F, jacobian, x0)
-
-
-
-# Обратная итерация 
-def g(x):
-    # Определите вашу итерационную функцию g(x)
-    return np.sqrt(4 - x**2)  # Пример: x = g(x) преобразует уравнение x^2 + y^2 = 4
-
-def fixed_point_iteration(g, x0, tol=1e-5, max_iter=100):
-    x_prev = x0
-    for i in range(max_iter):
-        x_next = g(x_prev)
-        
-        if abs(x_next - x_prev) < tol:
-            print(f"Найденный корень: {x_next:.5f} за {i+1} итераций.")
-            return x_next
-        
-        x_prev = x_next
-        
-    print("Достигнуто максимальное количество итераций.")
-    return None
-
-# Начальное приближение
-x0 = 1.0
-root = fixed_point_iteration(g, x0)
-
 
 
 # Интерполяция полиномом в форме Ньютона 
-def divided_differences(x, y):
+def divided_difference(x, y):
     n = len(y)
-    # таблицa разделенных разностей
-    coef = np.zeros((n, n))
-    coef[:, 0] = y  # Первый столбец - это значения функции в узлах
+    coeffs = np.zeros((n, n))
+    coeffs[:, 0] = y  
 
     for j in range(1, n):
         for i in range(n - j):
-            coef[i][j] = (coef[i + 1][j - 1] - coef[i][j - 1]) / (x[i + j] - x[i])
+            coeffs[i][j] = (coeffs[i + 1][j - 1] - coeffs[i][j - 1]) / (x[i + j] - x[i])
     
-    return coef[0]  # Возвращаем коэффициенты полинома
+    return coeffs[0]   
 
-def newton_interpolation(x, y, X):
+def newton_interpolation(x, y, y_target):
     n = len(x)
-    coef = divided_differences(x, y)
-    result = coef[0]
+    coeffs = divided_difference(x, y)
 
-    for i in range(1, n):
-        term = coef[i]
-        for j in range(i):
-            term *= (X - x[j])
-        result += term
-    
-    return result
+    def P(t):
+        total = coeffs[0]
+        for i in range(1, n):
+            term = coeffs[i]
+            for j in range(i):
+                term *= (t - x[j])
+            total += term
+        return total
 
-# Пример использования
-x = np.array([0, 1, 2, 3])  # Узлы интерполяции
-y = np.array([1, 2, 0, 5])  # Значения функции в узлах
+    a, b = min(x), max(x)   
+    tol = 1e-6
+    max_iter = 100
 
-X = 1.5  # Точка, в которой хотим оценить значение полинома
-interpolated_value = newton_interpolation(x, y, X)
-
-print(f"Интерполированное значение в точке {X}: {interpolated_value}")
-
-
-
-# форма Лагранжа
-def lagrange_interpolation(x, y, X):
-    n = len(x)
-    result = 0.0
-    
-    for i in range(n):
-        # Вычисляем лагранжев базисный полином L_i(X)
-        term = y[i]
-        for j in range(n):
-            if j != i:
-                term *= (X - x[j]) / (x[i] - x[j])
-        result += term
-    
-    return result
-
-# Пример использования
-x = np.array([0, 1, 2, 3])  # Узлы интерполяции
-y = np.array([1, 2, 0, 5])  # Значения функции в узлах
-
-X = 1.5  # Точка, в которой хотим оценить значение полинома
-interpolated_value = lagrange_interpolation(x, y, X)
-
-print(f"Интерполированное значение в точке {X}: {interpolated_value}")
-
+    for _ in range(max_iter):
+        mid = (a + b) / 2
+        P_mid = P(mid) - y_target
+        
+        if abs(P_mid) < tol:
+            return mid
+        elif P_mid > 0:
+            b = mid
+        else:
+            a = mid
+            
+    return None
 
 
 # ИНТЕГРАЛЬЧИКИ
 
 def rectangle_method(f, a, b, n):
-    """Метод прямоугольников"""
     h = (b - a) / n
     integral = 0.0
     for i in range(n):
@@ -186,7 +112,6 @@ def rectangle_method(f, a, b, n):
     return integral
 
 def trapezoidal_method(f, a, b, n):
-    """Метод трапеций"""
     h = (b - a) / n
     integral = 0.5 * (f(a) + f(b))
     for i in range(1, n):
@@ -195,8 +120,7 @@ def trapezoidal_method(f, a, b, n):
     return integral
 
 def simpson_method(f, a, b, n):
-    """Метод Симпсона"""
-    if n % 2 == 1:  # n должно быть четным
+    if n % 2 == 1:
         n += 1
     h = (b - a) / n
     integral = f(a) + f(b)
@@ -208,7 +132,6 @@ def simpson_method(f, a, b, n):
     return integral
 
 def simpson_38_method(f, a, b, n):
-    """Формула Симпсона 3/8"""
     if n % 3 != 0:  # n должно быть кратно 3
         n += (3 - n % 3)
     h = (b - a) / n
@@ -223,20 +146,60 @@ def simpson_38_method(f, a, b, n):
     integral *= 3 * h / 8
     return integral
 
-# Пример использования
-def f(x):
-    return x ** 2  # Пример функции
+#Формулой прямоугольников, но f задана вектором точек (x,y) (для 6 задачи)
+def rectangle_integration(x, f):
+    res = 0.0
+    
+    for i in range(len(x) - 1):
+        width = x[i + 1] - x[i]
+        height = f[i]
+        area = width * height
+        res += area
+    
+    return res
 
-a = 0  # Нижний предел интегрирования
-b = 1  # Верхний предел интегрирования
-n = 10  # Количество подынтервалов
+def inverse_interpolation(x, y, y_target):
+    for i in range(4):
+        if (y[i] <= y_target <= y[i + 1]) or (y[i] >= y_target >= y[i + 1]):
+            x_target = x[i] + (y_target - y[i]) * (x[i + 1] - x[i]) / (y[i + 1] - y[i])
+            return x_target
+    return None
 
-rectangle_result = rectangle_method(f, a, b, n)
-trapezoidal_result = trapezoidal_method(f, a, b, n)
-simpson_result = simpson_method(f, a, b, n)
-simpson_38_result = simpson_38_method(f, a, b, n)
+def main():
+    #Задачка 1
+    res1 = simple_iteration(g)
+    print (f"Задачка 1 : {res1}")
 
-print(f"Метод прямоугольников: {rectangle_result}")
-print(f"Метод трапеций: {trapezoidal_result}")
-print(f"Метод Симпсона: {simpson_result}")
-print(f"Формула Симпсона 3/8: {simpson_38_result}")
+    #Задачка 2 
+    res2 = newton_method (g, g_prime);
+    print (f"Задачка 2 : {res2}")
+
+    #Задачка 3 
+    x0 = [1.0, 1.0]
+    res3 = newton_method_system(F, jacobian, x0)
+    print (f"Задачка 3 : {res3}")
+
+    #Задачка 4 
+    x = [-7.3, -5.3, -1.3, 6.7, 22.7]
+    f = [4,2,1,-1,-2]
+    target = 0
+    res4 = inverse_interpolation (x, f, target)
+    print (f"Задачка 4 : {res4}")
+
+    #Задачка 5 
+    x = [-2, -1, 1, 3, 4]  
+    y = [79, 14, -2, -26, -11]  
+    X = 2
+
+    res5 = newton_interpolation(x, y, X)
+    print (f"Задачка 5 : {res5}")
+
+    #Задачка 6
+    x = [1,3,4,6,7,8,9]
+    f = [11.6, 24.8, 29, 26.6, 17.6, 1.8, -22]
+    res6 = rectangle_integration(x,f)
+    print (f"Задачка 6 : {res6}");
+    
+    return None
+
+main()
